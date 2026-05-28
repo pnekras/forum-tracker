@@ -168,6 +168,72 @@ body::before{content:'';position:fixed;inset:0;
 .login-error{color:#f87171;font-size:12px;margin-top:8px;display:none}
 .login-error.show{display:block}
 </style>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+
+    const firebaseConfig = {
+      apiKey: "ВСТАВЬ_СВОЙ_КЛЮЧ_СЮДА",
+      authDomain: "bot-forum-5e4c9.firebaseapp.com",
+      databaseURL: "https://bot-forum-5e4c9-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "bot-forum-5e4c9",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Auth state
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('userEmail').textContent = user.email;
+        loadTasksFirebase(db);
+      } else {
+        document.getElementById('loginScreen').style.display = 'flex';
+      }
+    });
+
+    // Login
+    window.doFirebaseLogin = async function() {
+      const email = document.getElementById('loginUser').value.trim();
+      const pass  = document.getElementById('loginPass').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch(e) {
+        document.getElementById('loginError').classList.add('show');
+        document.getElementById('loginPass').value = '';
+      }
+    }
+
+    // Logout
+    window.doLogout = async function() {
+      await signOut(auth);
+    }
+
+    // Load tasks realtime
+    function loadTasksFirebase(db) {
+      const tasksRef = ref(db, 'tasks');
+      onValue(tasksRef, snapshot => {
+        window.tasks = snapshot.val() || {};
+        render();
+        document.getElementById('updTime').textContent =
+          'Обновлено: ' + new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      });
+    }
+
+    // Update status
+    window.setStatusFirebase = async function(key, val) {
+      await update(ref(db, 'tasks/' + key), {status: val, isNew: false});
+    }
+
+    // Update comment
+    window.saveCommentFirebase = async function(key, comment) {
+      await update(ref(db, 'tasks/' + key), {comment: comment});
+    }
+  </script>
 </head>
 <body>
 
@@ -175,11 +241,11 @@ body::before{content:'';position:fixed;inset:0;
   <div class="login-box">
     <div class="ico">🔐</div>
     <h2>Панель администратора</h2>
-    <p>Доступ только для администратора бота</p>
-    <input type="text" id="loginUser" placeholder="Логин" autocomplete="username">
+    <p>Войди через email и пароль от Firebase</p>
+    <input type="text" id="loginUser" placeholder="Email" autocomplete="email" type="email">
     <input type="password" id="loginPass" placeholder="Пароль" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doLogin()">
-    <button onclick="doLogin()">Войти →</button>
+      onkeydown="if(event.key==='Enter')doFirebaseLogin()">
+    <button onclick="doFirebaseLogin()">Войти →</button>
     <div class="login-error" id="loginError">Неверный логин или пароль</div>
   </div>
 </div>
@@ -192,6 +258,8 @@ body::before{content:'';position:fixed;inset:0;
   <div class="admin-badge">🔐 ADMIN</div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+  <span style="font-size:11px;color:var(--muted2)" id="userEmail"></span>
+  <button onclick="doLogout()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;color:var(--muted2);font-family:Manrope,sans-serif;font-size:11px;cursor:pointer">Выйти</button>
     <div style="font-size:11px;color:var(--muted)" id="updTime"></div>
   </div>
 </div>
@@ -269,10 +337,7 @@ async function loadTasks() {
 async function setStatus(key, val) {
   tasks[key].status = val;
   tasks[key].isNew = false;
-  await fetch(`${FB}/tasks/${key}.json`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({status:val, isNew:false})
-  });
+  if (window.setStatusFirebase) await window.setStatusFirebase(key, val);
   renderStats();
   showToast('✅ Статус обновлён');
 }
@@ -280,10 +345,7 @@ async function setStatus(key, val) {
 async function saveComment() {
   const txt = document.getElementById('commentText').value.trim();
   tasks[commentKey].comment = txt;
-  await fetch(`${FB}/tasks/${commentKey}.json`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({comment:txt})
-  });
+  if (window.saveCommentFirebase) await window.saveCommentFirebase(commentKey, txt);
   closeModal(); render();
   showToast('💬 Комментарий сохранён');
 }
@@ -388,29 +450,7 @@ document.getElementById('searchBox').addEventListener('input', e => {
 loadTasks();
 setInterval(loadTasks, 15000);
 
-// ── AUTH ─────────────────────────────────────────────────────────────────
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'forum2024';
-
-function checkAuth() {
-  if (sessionStorage.getItem('auth') === 'ok') {
-    document.getElementById('loginScreen').style.display = 'none';
-  }
-}
-
-function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value;
-  if (u === ADMIN_USER && p === ADMIN_PASS) {
-    sessionStorage.setItem('auth', 'ok');
-    document.getElementById('loginScreen').style.display = 'none';
-  } else {
-    document.getElementById('loginError').classList.add('show');
-    document.getElementById('loginPass').value = '';
-  }
-}
-
-checkAuth();
+// Auth handled by Firebase SDK above
 
 </script>
 </body>
