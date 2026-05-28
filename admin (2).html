@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админ · Бот Форума</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090f;--s1:#0d1117;--s2:#131920;--s3:#1a2230;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --accent:#4f8eff;--accent2:#b06bff;--green:#22c55e;
+  --text:#dde3f8;--muted:#5a6180;--muted2:#8892b0;
+  --sw:#f59e0b;--sk:#3b82f6;--sc:#a78bfa;--sd:#22c55e;--sx:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 70% 40% at 10% 0%,rgba(79,142,255,.07),transparent),
+    radial-gradient(ellipse 50% 35% at 90% 100%,rgba(176,107,255,.05),transparent);
+  pointer-events:none;z-index:0}
+
+.app{position:relative;z-index:1}
+
+/* TOPBAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:16px 28px;border-bottom:1px solid var(--border);
+  background:rgba(7,9,15,.85);backdrop-filter:blur(16px);
+  position:sticky;top:0;z-index:100;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.brand h1{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:900;letter-spacing:-.2px}
+.brand p{font-size:11px;color:var(--muted2);margin-top:1px}
+.admin-badge{
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);
+  border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;
+  color:#f87171;letter-spacing:.4px;
+}
+.live-pill{display:flex;align-items:center;gap:5px;
+  background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);
+  border-radius:20px;padding:4px 11px;font-size:11px;font-weight:700;color:var(--green)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* STATS */
+.main{padding:24px 28px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:24px}
+.stat{background:var(--s1);border:1px solid var(--border);border-radius:13px;
+  padding:16px 14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--c,var(--accent))}
+.stat:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.15)}
+.stat-n{font-family:'Unbounded',sans-serif;font-size:24px;font-weight:900;color:var(--c,var(--accent));line-height:1}
+.stat-l{font-size:10px;color:var(--muted2);margin-top:4px}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.chip{padding:5px 13px;border-radius:20px;border:1px solid var(--border);
+  background:var(--s1);color:var(--muted2);font-family:'Manrope',sans-serif;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.spacer{flex:1}
+.search{background:var(--s1);border:1px solid var(--border);border-radius:9px;
+  padding:6px 13px;color:var(--text);font-family:'Manrope',sans-serif;
+  font-size:13px;width:200px;outline:none;transition:border-color .2s}
+.search:focus{border-color:var(--accent)}
+.search::placeholder{color:var(--muted)}
+
+/* TASK LIST */
+.sec-head{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;
+  color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
+.tasks{display:flex;flex-direction:column;gap:7px}
+
+.task{background:var(--s1);border:1px solid var(--border);border-radius:13px;
+  padding:14px 16px;display:grid;grid-template-columns:6px 1fr auto auto;
+  gap:12px;align-items:center;transition:all .2s;animation:up .2s ease both}
+@keyframes up{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.task:hover{border-color:var(--border2);background:var(--s2)}
+.task-bar{width:3px;border-radius:4px;background:var(--c,var(--accent));align-self:stretch}
+
+.task-row1{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px}
+.task-type{font-size:13px;font-weight:700}
+.tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.1px}
+.tag-svc{background:rgba(79,142,255,.12);color:#7aaeff}
+.tag-ph{background:rgba(239,68,68,.12);color:#f87171}
+.tag-pm{background:rgba(245,158,11,.12);color:#fbbf24}
+.tag-pl{background:rgba(34,197,94,.12);color:#4ade80}
+.tag-new{background:rgba(34,197,94,.2);color:#4ade80;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.task-desc{font-size:12px;color:var(--muted2)}
+.task-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.task-meta a{color:var(--accent);text-decoration:none;font-size:11px}
+.task-meta a:hover{text-decoration:underline}
+
+.dl-cell{text-align:right;min-width:85px}
+.dl-cell strong{display:block;font-size:12px;font-weight:700}
+.dl-cell span{font-size:10px;color:var(--muted)}
+.dl-urgent strong{color:#f87171}
+
+.status-sel{background:var(--s2);border:1px solid var(--border);border-radius:9px;
+  padding:5px 9px;color:var(--text);font-family:'Manrope',sans-serif;
+  font-size:12px;font-weight:600;cursor:pointer;outline:none;
+  transition:border-color .2s;min-width:145px}
+.status-sel:focus{border-color:var(--accent)}
+.status-sel option{background:#131920}
+
+.empty{text-align:center;padding:50px;color:var(--muted);font-size:13px}
+.empty span{font-size:36px;display:block;margin-bottom:10px}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;
+  display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--s2);border:1px solid var(--border2);border-radius:16px;
+  padding:24px;width:90%;max-width:420px}
+.modal h3{font-family:'Unbounded',sans-serif;font-size:13px;margin-bottom:14px}
+.modal textarea{width:100%;background:var(--s1);border:1px solid var(--border);
+  border-radius:9px;padding:10px 13px;color:var(--text);font-family:'Manrope',sans-serif;
+  font-size:13px;outline:none;resize:vertical;min-height:80px}
+.modal-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.btn-ghost{padding:7px 16px;border:1px solid var(--border);border-radius:8px;
+  background:none;color:var(--muted2);font-family:'Manrope',sans-serif;font-size:13px;cursor:pointer}
+.btn-save{padding:7px 16px;border:none;border-radius:8px;
+  background:var(--accent);color:#fff;font-family:'Manrope',sans-serif;
+  font-size:13px;font-weight:700;cursor:pointer}
+
+/* LOADING */
+.loading{text-align:center;padding:60px;color:var(--muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin 1s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:300;
+  background:var(--s3);border:1px solid var(--border2);border-radius:12px;
+  padding:12px 18px;font-size:13px;font-weight:600;
+  transform:translateY(80px);opacity:0;transition:all .3s;
+}
+.toast.show{transform:translateY(0);opacity:1}
+
+@media(max-width:600px){
+  .topbar{padding:12px 16px}
+  .main{padding:16px}
+  .task{grid-template-columns:5px 1fr}
+  .dl-cell,.status-sel{grid-column:2}
+}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:999;
+  display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--s1);border:1px solid var(--border2);border-radius:18px;
+  padding:36px;width:90%;max-width:380px;text-align:center}
+.login-box .ico{font-size:40px;margin-bottom:14px}
+.login-box h2{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:900;margin-bottom:6px}
+.login-box p{font-size:12px;color:var(--muted2);margin-bottom:24px}
+.login-box input{width:100%;background:var(--s2);border:1px solid var(--border);
+  border-radius:9px;padding:11px 14px;color:var(--text);font-family:'Manrope',sans-serif;
+  font-size:14px;outline:none;margin-bottom:10px;transition:border-color .2s}
+.login-box input:focus{border-color:var(--accent)}
+.login-box button{width:100%;padding:12px;border:none;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+.login-error{color:#f87171;font-size:12px;margin-top:8px;display:none}
+.login-error.show{display:block}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="ico">🔐</div>
+    <h2>Панель администратора</h2>
+    <p>Доступ только для администратора бота</p>
+    <input type="text" id="loginUser" placeholder="Логин" autocomplete="username">
+    <input type="password" id="loginPass" placeholder="Пароль" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Войти →</button>
+    <div class="login-error" id="loginError">Неверный логин или пароль</div>
+  </div>
+</div>
+<div class="app">
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">🤖</div>
+    <div><h1>БОТ ФОРУМА</h1><p>Панель администратора</p></div>
+  </div>
+  <div class="admin-badge">🔐 ADMIN</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+    <div style="font-size:11px;color:var(--muted)" id="updTime"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="stats" id="stats"></div>
+  <div class="toolbar">
+    <span style="font-size:11px;color:var(--muted);font-weight:700">СЛУЖБА:</span>
+    <button class="chip on" data-f="all">Все</button>
+    <button class="chip" data-f="Программный штаб">Прогр. штаб</button>
+    <button class="chip" data-f="Отдел по организации атмосферных программ">Атм. программы</button>
+    <button class="chip" data-f="Служба по работе с участниками">Участники</button>
+    <button class="chip" data-f="Медиацентр">Медиацентр</button>
+    <button class="chip" data-f="Другое">Другое</button>
+    <div class="spacer"></div>
+    <input class="search" type="text" placeholder="🔍 Поиск..." id="searchBox">
+  </div>
+  <div class="sec-head" id="countLabel">Загрузка...</div>
+  <div class="tasks" id="taskList"><div class="loading"><div class="spinner"></div>Загружаю задачи...</div></div>
+</div>
+</div>
+
+<div class="overlay" id="commentOverlay">
+  <div class="modal">
+    <h3>💬 Комментарий к задаче</h3>
+    <textarea id="commentText" placeholder="Введи комментарий..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn-save" onclick="saveComment()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const FB = 'https://bot-forum-5e4c9-default-rtdb.europe-west1.firebasedatabase.app';
+let tasks = {};
+let filterSvc = 'all';
+let filterQ = '';
+let commentKey = null;
+
+const SVC_COLOR = {
+  'Программный штаб':'#4f8eff',
+  'Отдел по организации атмосферных программ':'#b06bff',
+  'Служба по работе с участниками':'#22c55e',
+  'Медиацентр':'#f59e0b',
+  'Другое':'#8892b0',
+};
+const STATUS_OPT = [
+  {v:'wait',l:'⏳ Ожидаю данные'},
+  {v:'work',l:'🔄 В работе'},
+  {v:'check',l:'👀 На проверке'},
+  {v:'done',l:'✅ Готово'},
+  {v:'cancel',l:'❌ Отменено'},
+];
+const STATUS_ORDER = {work:0,check:1,wait:2,done:3,cancel:4};
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function loadTasks() {
+  try {
+    const r = await fetch(`${FB}/tasks.json`);
+    tasks = (await r.json()) || {};
+    render();
+    document.getElementById('updTime').textContent =
+      'Обновлено: ' + new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) { console.error(e); }
+}
+
+async function setStatus(key, val) {
+  tasks[key].status = val;
+  tasks[key].isNew = false;
+  await fetch(`${FB}/tasks/${key}.json`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status:val, isNew:false})
+  });
+  renderStats();
+  showToast('✅ Статус обновлён');
+}
+
+async function saveComment() {
+  const txt = document.getElementById('commentText').value.trim();
+  tasks[commentKey].comment = txt;
+  await fetch(`${FB}/tasks/${commentKey}.json`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({comment:txt})
+  });
+  closeModal(); render();
+  showToast('💬 Комментарий сохранён');
+}
+
+function openModal(key) {
+  commentKey = key;
+  document.getElementById('commentText').value = tasks[key].comment || '';
+  document.getElementById('commentOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('commentOverlay').classList.remove('open');
+}
+document.getElementById('commentOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+function renderStats() {
+  const c = {wait:0,work:0,check:0,done:0,cancel:0};
+  Object.values(tasks).forEach(t => c[t.status] = (c[t.status]||0)+1);
+  const defs = [
+    {k:'work', l:'В работе',     col:'#3b82f6'},
+    {k:'check',l:'На проверке',  col:'#a78bfa'},
+    {k:'wait', l:'Ожидаю данные',col:'#f59e0b'},
+    {k:'done', l:'Готово',       col:'#22c55e'},
+    {k:'cancel',l:'Отменено',    col:'#ef4444'},
+  ];
+  document.getElementById('stats').innerHTML = defs.map(d => `
+    <div class="stat" style="--c:${d.col}">
+      <div class="stat-n">${c[d.k]||0}</div>
+      <div class="stat-l">${d.l}</div>
+    </div>`).join('');
+}
+
+function render() {
+  renderStats();
+  let arr = Object.entries(tasks).map(([k,v]) => ({...v, _key:k}));
+  arr = arr.filter(t => {
+    const ms = filterSvc === 'all' || t.service === filterSvc;
+    const mq = !filterQ ||
+      (t.desc||'').toLowerCase().includes(filterQ) ||
+      (t.service||'').toLowerCase().includes(filterQ) ||
+      (t.type||'').toLowerCase().includes(filterQ) ||
+      (t.who||'').toLowerCase().includes(filterQ);
+    return ms && mq;
+  });
+  arr.sort((a,b) => {
+    if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
+    if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+    return (STATUS_ORDER[a.status]||9) - (STATUS_ORDER[b.status]||9);
+  });
+
+  document.getElementById('countLabel').textContent =
+    arr.length === Object.keys(tasks).length
+      ? `Все задачи · ${arr.length}`
+      : `Найдено · ${arr.length} из ${Object.keys(tasks).length}`;
+
+  const list = document.getElementById('taskList');
+  if (!arr.length) {
+    list.innerHTML = '<div class="empty"><span>🔍</span>Задачи не найдены</div>'; return;
+  }
+
+  list.innerHTML = arr.map((t,i) => {
+    const col = SVC_COLOR[t.service] || '#4f8eff';
+    const prioTag = {high:'tag-ph',mid:'tag-pm',low:'tag-pl'}[t.prio] || 'tag-pm';
+    const prioLbl = {high:'Высокий',mid:'Средний',low:'Низкий'}[t.prio] || '';
+    const opts = STATUS_OPT.map(o =>
+      `<option value="${o.v}"${t.status===o.v?' selected':''}>${o.l}</option>`).join('');
+    return `
+    <div class="task" style="animation-delay:${i*25}ms">
+      <div class="task-bar" style="background:${col}"></div>
+      <div>
+        <div class="task-row1">
+          <span class="task-type">${t.type||''}</span>
+          <span class="tag tag-svc">${t.service||''}</span>
+          <span class="tag ${prioTag}">${prioLbl}</span>
+          ${t.urgent?'<span class="tag" style="background:rgba(239,68,68,.2);color:#f87171">⚡ СРОЧНО</span>':''}
+          ${t.isNew?'<span class="tag tag-new">🆕 НОВАЯ</span>':''}
+        </div>
+        <div class="task-desc">${t.desc||''}</div>
+        <div class="task-meta">👤 ${t.who||'—'} ${t.comment?`· 💬 ${t.comment}`:''} ·
+          <a href="#" onclick="openModal('${t._key}');return false">${t.comment?'✏️ изм.':'+ комм.'}</a>
+        </div>
+      </div>
+      <div class="dl-cell ${t.urgent?'dl-urgent':''}">
+        <strong>${t.deadline||'—'}</strong><span>дедлайн</span>
+      </div>
+      <select class="status-sel" onchange="setStatus('${t._key}',this.value)">${opts}</select>
+    </div>`;
+  }).join('');
+}
+
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+    c.classList.add('on'); filterSvc = c.dataset.f; render();
+  });
+});
+document.getElementById('searchBox').addEventListener('input', e => {
+  filterQ = e.target.value.toLowerCase(); render();
+});
+
+loadTasks();
+setInterval(loadTasks, 15000);
+
+// ── AUTH ─────────────────────────────────────────────────────────────────
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'forum2024';
+
+function checkAuth() {
+  if (sessionStorage.getItem('auth') === 'ok') {
+    document.getElementById('loginScreen').style.display = 'none';
+  }
+}
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    sessionStorage.setItem('auth', 'ok');
+    document.getElementById('loginScreen').style.display = 'none';
+  } else {
+    document.getElementById('loginError').classList.add('show');
+    document.getElementById('loginPass').value = '';
+  }
+}
+
+checkAuth();
+
+</script>
+</body>
+</html>
