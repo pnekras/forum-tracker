@@ -194,11 +194,30 @@ const SERVICES = [
   'Другое',
 ];
 
-// When service is selected in form — auto-filter status view
+// When service is selected in form — auto-filter + save to localStorage
 function onSvcChange() {
   const svc = document.getElementById('f-svc').value;
-  if (svc) document.getElementById('filterSvc').value = svc;
+  if (svc) {
+    localStorage.setItem('savedService', svc);
+    document.getElementById('filterSvc').value = svc;
+  }
   loadStatus();
+}
+
+// Restore saved service on page load
+function restoreSavedService() {
+  const saved = localStorage.getItem('savedService');
+  if (saved) {
+    const sel = document.getElementById('f-svc');
+    // Check if option exists
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === saved || sel.options[i].text === saved) {
+        sel.value = saved;
+        document.getElementById('filterSvc').value = saved;
+        break;
+      }
+    }
+  }
 }
 
 async function loadStatus() {
@@ -319,6 +338,7 @@ async function submit() {
 }
 
 addEntry();
+restoreSavedService();
 loadStatus();
 setInterval(loadStatus, 20000);
 </script>
